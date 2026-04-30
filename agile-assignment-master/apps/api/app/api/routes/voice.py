@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import base64
 import logging
+import os
 import requests
 
+from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, status
 from fastapi.responses import StreamingResponse
 
@@ -18,36 +20,66 @@ from app.schemas.voice import (
 from app.services.interfaces import TextToSpeechProvider
 from app.services.tts import TTSError, stream_answer_chunks, synthesize_answer
 
+load_dotenv()
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["voice"])
 
-import os
-from dotenv import load_dotenv
-load_dotenv()
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 
-def get_answer_from_qwen(question: str) -> str:
+def get_answer_from_llm(question: str) -> str:
+    ollama_url = os.getenv("OLLAMA_URL", "https://nebiakay-llama-backend.hf.space/api/generate")
+    model_name = os.getenv("MODEL_NAME", "llama3.2:1b")
     response = requests.post(
-        "https://openrouter.ai/api/v1/chat/completions",
-        headers={
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "http://localhost:8000",
-            "X-Title": "Agile Assignment"
-        },
+        ollama_url,
+        headers={"Content-Type": "application/json"},
         json={
-            "model": "google/gemma-3-4b-it:free",
-            "messages": [{"role": "user", "content": f"Answer in 2 sentences only: {question}"}]
+            "model": model_name,
+            "prompt": f"Answer in 2 sentences only: {question}",
+            "stream": False
         }
     )
     data = response.json()
-    print("Qwen response:", data)
-    if "choices" not in data:
-        raise Exception(f"Qwen API error: {data}")
-    content = data["choices"][0]["message"]["content"]
-    content = content.split('\n')[0][:500]
-    return content
+    print("LLM response:", data)
+    if "response" not in data:
+        raise Exception(f"LLM API error: {data}")
+    return data["response"]
+
+
+def stream_answer_from_llm(question: str):
+    ollama_url = os.getenv("OLLAMA_URL", "https://nebiakay-llama-backend.hf.space/api/generate")
+    model_name = os.getenv("MODEL_NAME", "llama3.2:1b")
+    response = requests.post(
+        ollama_url,
+        headers={"Content-Type": "application/json"},
+        json={
+            "model": model_name,
+            "prompt": f"Answer in 2 sentences only: {question}",
+            "stream": True
+        },
+        stream=True
+    )
+
+    buffer = ""
+    for line in response.iter_lines():
+        if line:
+            try:
+                import json
+                data = json.loads(line.decode("utf-8"))
+                token = data.get("response", "")
+                if token:
+                    buffer += token
+                    if any(p in buffer for p in [".", "!", "?"]):
+                        yield buffer.strip()
+                        buffer = ""
+                if data.get("done"):
+                    break
+            except Exception:
+                continue
+
+    if buffer.strip():
+        yield buffer.strip()
+
 
 def get_tts_provider() -> TextToSpeechProvider:
     from gtts import gTTS
@@ -131,14 +163,14 @@ def synthesize_tts_stream(
     "/ask",
     response_model=TTSResponse,
     status_code=status.HTTP_200_OK,
-    summary="Ask a question and get audio response from Qwen LLM",
+    summary="Ask a question and get audio response from team LLM",
 )
 def ask_and_speak(
     body: TTSRequest,
     provider: TextToSpeechProvider = Depends(get_tts_provider),
 ) -> TTSResponse:
     try:
-        answer = get_answer_from_qwen(body.text)
+        answer = get_answer_from_llm(body.text)
         result = synthesize_answer(provider, answer)
     except TTSError as exc:
         logger.error("TTS synthesis failed: %s", exc)
@@ -162,7 +194,7 @@ def ask_and_speak(
 
 @router.post(
     "/ask/stream",
-    summary="Ask a question and get streamed audio response from Qwen LLM",
+    summary="Ask a question and get streamed audio response from team LLM",
     response_class=StreamingResponse,
 )
 def ask_and_speak_stream(
@@ -171,17 +203,19 @@ def ask_and_speak_stream(
 ) -> StreamingResponse:
     def _generate():
         try:
-            answer = get_answer_from_qwen(body.text)
-            for index, chunk in enumerate(stream_answer_chunks(provider, answer)):
-                tts_chunk = TTSChunk(
-                    index=index,
-                    mime_type=chunk.mime_type,
-                    audio_b64=base64.b64encode(chunk.audio_bytes).decode(),
-                )
-                yield tts_chunk.model_dump_json() + "\n"
-        except TTSError as exc:
-            logger.error("TTS stream error: %s", exc)
-            yield f'{{"error": "{exc}"}}\n'
+            for text_chunk in stream_answer_from_llm(body.text):
+                if text_chunk.strip():
+                    try:
+                        result = synthesize_answer(provider, text_chunk)
+                        tts_chunk = TTSChunk(
+                            index=0,
+                            mime_type=result.mime_type,
+                            audio_b64=base64.b64encode(result.audio_bytes).decode(),
+                        )
+                        yield tts_chunk.model_dump_json() + "\n"
+                    except Exception as e:
+                        logger.error("TTS chunk error: %s", e)
+                        continue
         except Exception:
             logger.exception("Unexpected TTS stream error")
             yield '{"error": "Unexpected error."}\n'
