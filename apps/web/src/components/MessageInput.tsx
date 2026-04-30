@@ -5,13 +5,19 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import MediaSelectionButton from "@/components/MediaSelectionButton";
 import VoiceWave from "@/components/VoiceWave";
 
-  interface MessageInputProps{
-    isListening?: boolean;
-    setIsListening?: (val:boolean) => void;
-  }
+interface MessageInputProps {
+  message: string;
+  onMessageChange: (message: string) => void;
+  isListening?: boolean;
+  setIsListening?: (val: boolean) => void;
+}
 
-export default function MessageInput({isListening,setIsListening}:MessageInputProps) {
-  const [message, setMessage] = useState("");
+export default function MessageInput({ 
+  message, 
+  onMessageChange, 
+  isListening, 
+  setIsListening 
+}: MessageInputProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingPulse, setRecordingPulse] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -49,8 +55,8 @@ export default function MessageInput({isListening,setIsListening}:MessageInputPr
     if (!trimmed) return;
 
     window.dispatchEvent(new CustomEvent("messageSent", { detail: trimmed }));
-    setMessage("");
-  }, [message]);
+    onMessageChange("");
+  }, [message, onMessageChange]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
@@ -62,6 +68,7 @@ export default function MessageInput({isListening,setIsListening}:MessageInputPr
   const stopRecording = () => {
     mediaRecorderRef.current?.stop();
     setIsRecording(false);
+    if (setIsListening) setIsListening(false);
   };
 
   const toggleRecording = async () => {
@@ -93,13 +100,14 @@ export default function MessageInput({isListening,setIsListening}:MessageInputPr
         if (chunksRef.current.length > 0) {
           const blob = new Blob(chunksRef.current, { type: "audio/webm" });
           window.dispatchEvent(new CustomEvent("audioRecorded", { detail: blob }));
-          setMessage("Voice message recorded");
+          onMessageChange("Voice message recorded");
         }
       };
 
       mediaRecorderRef.current = recorder;
       recorder.start();
       setIsRecording(true);
+      if (setIsListening) setIsListening(true);
     } catch {
       alert("Microphone access denied. Please allow microphone permissions.");
     }
@@ -108,6 +116,7 @@ export default function MessageInput({isListening,setIsListening}:MessageInputPr
   return (
     <section className="message-composer" aria-label="Message composer">
       <MediaSelectionButton />
+      
       {isRecording ? (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <VoiceWave isListening={isRecording} />
@@ -118,12 +127,13 @@ export default function MessageInput({isListening,setIsListening}:MessageInputPr
           className="message-textarea"
           placeholder="Type your message..."
           value={message}
-          onChange={(event) => setMessage(event.target.value)}
+          onChange={(event) => onMessageChange(event.target.value)}
           onKeyDown={handleKeyDown}
           rows={1}
           aria-label="Message input"
         />
       )}
+
       <div className="composer-actions">
         <span className="hint-text">
           {isRecording ? "Recording. Press stop when done." : "Enter to send. Shift+Enter for a new line."}
