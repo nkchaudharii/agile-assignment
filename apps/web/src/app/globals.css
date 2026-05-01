@@ -216,6 +216,13 @@ body {
   opacity: 0.45;
 }
 
+.voice-error {
+  grid-column: 1 / -1;
+  color: #b91c1c;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
 .copy-button-wrapper {
   width: min(100%, 250px);
   margin-top: 2px;

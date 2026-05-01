@@ -9,3 +9,7 @@ class VoiceSessionRequest(BaseModel):
 class VoiceSessionResponse(BaseModel):
     status: str
     message: str
+
+
+class VoiceTranscriptionResponse(BaseModel):
+    text: str
