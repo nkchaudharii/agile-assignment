@@ -115,3 +115,5 @@ class _settings:
         self.algorithm = base.algorithm
         self.access_token_expire_minutes = base.access_token_expire_minutes
         self.document_storage_path = str(tmp_path)
+        self.chroma_db_path = str(tmp_path.parent / f"{tmp_path.name}-chroma")
+        self.chroma_collection_name = "company-documents-test"

@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
     document_storage_path: str = "data/documents"
+    chroma_db_path: str = "data/chroma"
+    chroma_collection_name: str = "company-documents"
     admin_username: str = "admin"
     admin_password_hash: str = ""
 
