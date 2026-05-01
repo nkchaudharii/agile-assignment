@@ -7,25 +7,23 @@ This FastAPI app is a foundation only. It defines the project shape and placehol
 - application entrypoint
 - settings
 - health route
-- placeholder document, query, and voice endpoints
+- placeholder voice endpoint
+- document replacement, indexing, and retrieval-backed query endpoints
 - typed schemas
 - provider interface stubs
-- tests for startup and health
+- tests for startup, health, auth, document replacement, and retrieval
 
 ## Not Included
 
-- retrieval or chunking logic
-- embeddings
-- vector database integration
 - LLM providers
 - speech pipelines
-- storage, auth, or background jobs
+- background jobs
 
 ## API Endpoints
 
-### `PUT /documents` — Replace company document
+### `PUT /documents` - Replace company document
 
-Replaces the document used by the LLM with a newly uploaded file. The old document is deleted immediately and the new one takes effect for all subsequent queries without requiring a restart.
+Replaces the document used by the API with a newly uploaded file. The new document is parsed, chunked, embedded, stored in Chroma, and then stored as the single active company document. Invalid replacements do not overwrite the existing document or active index.
 
 **Authentication:** Bearer token with `Admin` role required.
 - No token → `401 Unauthorized`
@@ -41,6 +39,31 @@ Replaces the document used by the LLM with a newly uploaded file. The old docume
 ```
 
 **Error responses:** `401`, `403`, `422` (unsupported format / empty file / oversized file)
+
+### `POST /query` - Query indexed company document
+
+Returns the highest-ranked chunks from the active company document.
+
+**Request:**
+```json
+{ "query": "What does the company do?", "top_k": 5 }
+```
+
+**Success response `200`:**
+```json
+{ "answer": "...", "sources": ["company.txt#0"] }
+```
+
+**Error responses:** `400` (no loaded document / empty query)
+
+## Vector Store
+
+The API uses Chroma through a local `PersistentClient`. Configure the database path and collection name with:
+
+```bash
+CHROMA_DB_PATH=data/chroma
+CHROMA_COLLECTION_NAME=company-documents
+```
 
 ## Commands
 
