@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, AsyncGenerator
 
 import httpx
 
@@ -41,6 +42,35 @@ class OllamaGenerateProvider:
             raise LLMProviderError("LLM provider returned an empty answer")
         return answer
 
+    async def generate_stream(
+        self,
+        prompt: str,
+        context: Sequence[SearchResult],
+        history: Sequence[ChatTurn],
+    ) -> AsyncGenerator[str, None]:
+        try:
+            
+            async with httpx.AsyncClient(timeout=None) as client:
+                async with client.stream(
+                    "POST",
+                    self._url,
+                    json={"model": self._model, "prompt": prompt, "stream": True},
+                ) as response:
+                    response.raise_for_status()
+                    async for line in response.aiter_lines():
+                        if not line:
+                            continue
+                        try:
+                            chunk = json.loads(line)
+                            if token := chunk.get("response"):
+                                yield token
+                            if chunk.get("done"):
+                                break
+                        except json.JSONDecodeError:
+                            continue
+        except Exception as exc:
+            raise LLMProviderError(f"Streaming failed: {str(exc)}")
+
 
 def get_chat_provider(settings: Settings | None = None) -> OllamaGenerateProvider:
     resolved_settings = settings or get_settings()
@@ -57,18 +87,34 @@ def run_rag_query(query: str, top_k: int) -> tuple[str, list[str]]:
     normalized_query = query.strip()
     if not normalized_query:
         raise ValueError("Query cannot be empty")
-    if top_k < 1 or top_k > 25:
-        raise ValueError("top_k must be between 1 and 25")
-
+    
     results = search_documents(normalized_query, top_k=top_k)
     prompt = build_rag_prompt(normalized_query, results)
-    try:
-        answer = get_chat_provider().generate(prompt, results, [])
-    except LLMProviderError:
-        raise
-    except Exception as exc:
-        raise LLMProviderError("LLM provider failed") from exc
+    answer = get_chat_provider().generate(prompt, results, [])
     return answer, _sources(results)
+
+
+async def run_rag_query_stream(query: str, top_k: int) -> AsyncGenerator[str, None]:
+    
+    try:
+        normalized_query = query.strip()
+        if not normalized_query:
+            raise ValueError("Query cannot be empty")
+
+        
+        results = search_documents(normalized_query, top_k=top_k)
+        
+        prompt = build_rag_prompt(normalized_query, results)
+        
+        
+        provider = get_chat_provider()
+        async for chunk in provider.generate_stream(prompt, results, []):
+            yield chunk
+            
+    except Exception as e:
+        
+        print(f"BACKEND STREAM ERROR: {str(e)}")
+        yield f"Error: {str(e)}"
 
 
 def build_rag_prompt(query: str, results: Sequence[SearchResult]) -> str:
@@ -92,9 +138,7 @@ def _extract_answer(payload: dict[str, Any]) -> str:
         return payload["response"]
     if isinstance(payload.get("answer"), str):
         return payload["answer"]
-    if isinstance(payload.get("text"), str):
-        return payload["text"]
-
+    
     message = payload.get("message")
     if isinstance(message, dict) and isinstance(message.get("content"), str):
         return message["content"]
