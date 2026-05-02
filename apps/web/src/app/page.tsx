@@ -2,9 +2,10 @@
 
 import type { DragEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import CopyTextButton from "@/components/CopyTextButton";
 import MessageInput from "@/components/MessageInput";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 const SUGGESTIONS = [
   "What services does the company offer?",
@@ -14,10 +15,8 @@ const SUGGESTIONS = [
 ];
 
 const LLM_OUTPUT_TEXT = "LLM OUTPUT DATA";
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 export default function Home() {
-  const router = useRouter();
   const [isDragging, setIsDragging] = useState(false);
   const [dragCounter, setDragCounter] = useState(0);
   const [lastQuery, setLastQuery] = useState<string | null>(null);
@@ -87,26 +86,16 @@ export default function Home() {
     void sendQuery(lastQuery, "retry");
   }, [isRetrying, isSending, lastQuery, sendQuery]);
 
-  useEffect(() => {
-    if (!localStorage.getItem("admin_token")) {
-      router.push("/login");
-    }
-  }, [router]);
-
   const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setDragCounter((prev) => prev + 1);
-    if (dragCounter === 0) {
-      setIsDragging(true);
-    }
+    if (dragCounter === 0) setIsDragging(true);
   };
 
   const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setDragCounter((prev) => prev - 1);
-    if (dragCounter - 1 === 0) {
-      setIsDragging(false);
-    }
+    if (dragCounter - 1 === 0) setIsDragging(false);
   };
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
@@ -133,7 +122,7 @@ export default function Home() {
     const invalidFiles = files.filter((file) => !validTypes.includes(file.type));
 
     if (invalidFiles.length > 0) {
-      alert(`Some files are not valid. Valid formats: docx, pdf, txt, img. Invalid files: ${invalidFiles.map((file) => file.name).join(", ")}`);
+      alert(`Some files are not valid. Valid formats: docx, pdf, txt, img. Invalid files: ${invalidFiles.map((f) => f.name).join(", ")}`);
     } else {
       alert("Files dropped successfully");
     }
@@ -145,23 +134,19 @@ export default function Home() {
 
   return (
     <main className="page-root">
-      <section
+      <div
         className="drop-zone"
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
-        aria-label="Document upload drop zone"
       >
-        <h1>Drag files here</h1>
-        <p>Valid formats: docx, pdf, txt, jpg, png, gif, webp, bmp, tiff.</p>
-        <p className="drop-zone-help">Drop files on the box above to upload.</p>
+        <h1>Ask anything</h1>
+        <p>Drop a file here or use the input below</p>
         {isDragging && (
-          <div className="drop-zone-overlay">
-            Drop files now
-          </div>
+          <div className="drop-zone-overlay">Drop to attach file</div>
         )}
-      </section>
+      </div>
 
       <section className="prompt-suggestions" aria-label="Suggested prompts">
         {SUGGESTIONS.map((suggestion) => (
