@@ -1,7 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import CopyTextButton from "@/components/CopyTextButton";
 import MessageInput from "@/components/MessageInput";
 import { useAdminAuth } from "@/context/AdminAuthContext";
@@ -23,13 +23,76 @@ type ReplaceStatus = "idle" | "uploading" | "success" | "error";
 
 export default function Home() {
   const { isAdmin, token } = useAdminAuth();
+  const [lastQuery, setLastQuery] = useState<string | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [statusVariant, setStatusVariant] = useState<"info" | "success" | "error">("info");
   const [isListening, setIsListening] = useState(false);
   const [message, setMessage] = useState("");
-
   const [replaceFile, setReplaceFile] = useState<File | null>(null);
   const [replaceStatus, setReplaceStatus] = useState<ReplaceStatus>("idle");
   const [replaceError, setReplaceError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const sendQuery = useCallback(async (query: string, mode: "send" | "retry") => {
+    setIsRetrying(mode === "retry");
+    setIsSending(true);
+    setStatusVariant("info");
+    setStatusMessage(mode === "retry" ? "Retrying your previous query..." : "Processing your message...");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/query`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        const message = response.status === 501
+          ? "This endpoint is not implemented yet."
+          : `${response.status} ${response.statusText}`;
+        throw new Error(errorText || message);
+      }
+
+      setStatusVariant("success");
+      setStatusMessage(mode === "retry" ? "The query was resent successfully." : "The query was sent successfully.");
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "Unknown error.";
+      setStatusVariant("error");
+      setStatusMessage(
+        mode === "retry"
+          ? `Unable to resend the last query. ${detail}`
+          : `Unable to send the query. ${detail}`,
+      );
+    } finally {
+      setIsRetrying(false);
+      setIsSending(false);
+    }
+  }, []);
+
+  const handleMessageSent = useCallback((event: Event) => {
+    const detail = (event as CustomEvent<string>).detail;
+    if (!detail) return;
+
+    setLastQuery(detail);
+    setStatusVariant("info");
+    setStatusMessage("Processing your message...");
+    void sendQuery(detail, "send");
+  }, [sendQuery]);
+
+  useEffect(() => {
+    window.addEventListener("messageSent", handleMessageSent as EventListener);
+    return () => {
+      window.removeEventListener("messageSent", handleMessageSent as EventListener);
+    };
+  }, [handleMessageSent]);
+
+  const handleRetry = useCallback(() => {
+    if (!lastQuery || isRetrying || isSending) return;
+    void sendQuery(lastQuery, "retry");
+  }, [isRetrying, isSending, lastQuery, sendQuery]);
 
   const handleSuggestionClick = (suggestion: string) => {
     setMessage(suggestion);
@@ -139,7 +202,16 @@ export default function Home() {
         onMessageChange={setMessage}
         isListening={isListening}
         setIsListening={setIsListening}
+        canRetry={Boolean(lastQuery) && !isSending}
+        isRetrying={isRetrying}
+        onRetry={handleRetry}
       />
+
+      {statusMessage ? (
+        <p className={`status-text ${statusVariant}`} role="status">
+          {statusMessage}
+        </p>
+      ) : null}
 
       <div className="copy-button-wrapper">
         <CopyTextButton textToCopy={LLM_OUTPUT_TEXT} />
