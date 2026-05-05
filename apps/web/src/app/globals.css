@@ -2,8 +2,6 @@
 
 * {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
 }
 
 body {
@@ -16,7 +14,10 @@ body {
   position: fixed;
   top: 18px;
   left: 18px;
+  right: 18px;
   z-index: 10;
+  display: flex;
+  align-items: center;
 }
 
 .company-logo {
@@ -221,16 +222,17 @@ body {
 }
 
 .message-composer {
-  width: min(100%, 700px);
+  width: 100%;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: end;
+  align-items: center;
   gap: 12px;
-  padding: 12px 16px;
+  min-height: 78px;
+  padding: 12px 18px;
   border: 1.5px solid #e5e7eb;
   border-radius: 18px;
   background: #ffffff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
 }
 
 .message-textarea {
@@ -253,6 +255,7 @@ body {
 .composer-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 10px;
 }
 
@@ -416,6 +419,280 @@ body {
   justify-content: center;
 }
 
+.admin-header-controls {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-badge {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+  padding: 4px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #f1f5f9;
+}
+
+.admin-login-btn,
+.admin-logout-btn {
+  padding: 7px 14px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.admin-login-btn {
+  border: 1.5px solid #2563eb;
+  background: transparent;
+  color: #2563eb;
+}
+
+.admin-login-btn:hover {
+  background: #eff6ff;
+}
+
+.admin-logout-btn {
+  border: 1.5px solid #cbd5e1;
+  background: transparent;
+  color: #475569;
+}
+
+.admin-logout-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.doc-replace-widget {
+  position: relative;
+}
+
+.doc-replace-trigger-btn {
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #2563eb;
+  background: transparent;
+  color: #2563eb;
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.doc-replace-trigger-btn:hover {
+  background: #eff6ff;
+}
+
+.doc-replace-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 50;
+  min-width: 320px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: media-dropdown-in 0.12s ease;
+}
+
+.doc-replace-dropdown-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.doc-replace-upload-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.file-picker-hidden {
+  display: none;
+}
+
+.file-picker-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px 16px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  text-align: center;
+  outline: none;
+}
+
+.file-picker-zone:hover,
+.file-picker-zone:focus-visible {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.file-picker-zone.dragging {
+  border-color: #2563eb;
+  background: #dbeafe;
+}
+
+.file-picker-zone.has-file {
+  cursor: default;
+  border-style: solid;
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.file-picker-upload-icon {
+  color: #94a3b8;
+  display: flex;
+}
+
+.file-picker-zone:hover .file-picker-upload-icon,
+.file-picker-zone:focus-visible .file-picker-upload-icon,
+.file-picker-zone.dragging .file-picker-upload-icon {
+  color: #2563eb;
+}
+
+.file-picker-prompt {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.file-picker-zone:hover .file-picker-prompt,
+.file-picker-zone.dragging .file-picker-prompt {
+  color: #1d4ed8;
+}
+
+.file-picker-hint {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.file-picker-selected {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.file-picker-file-icon {
+  color: #2563eb;
+  flex-shrink: 0;
+  display: flex;
+}
+
+.file-picker-name {
+  flex: 1;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1e40af;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.file-picker-clear {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  background: #bfdbfe;
+  color: #1d4ed8;
+  font-size: 0.7rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.15s;
+}
+
+.file-picker-clear:hover {
+  background: #93c5fd;
+}
+
+.doc-replace-panel {
+  width: min(100%, 480px);
+  padding: 24px 28px;
+  border-radius: 18px;
+  border: 2px dashed #2563eb;
+  background: #ffffff;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.doc-replace-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.doc-replace-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.doc-replace-input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.doc-replace-btn {
+  width: 100%;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.doc-replace-btn:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.doc-replace-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.doc-replace-success {
+  font-size: 0.875rem;
+  color: #15803d;
+}
+
+.doc-replace-error {
+  font-size: 0.875rem;
+  color: #b91c1c;
+}
+
 .media-selection-wrapper {
   position: relative;
   display: flex;
@@ -562,6 +839,7 @@ body {
   .message-composer {
     grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
+    min-height: auto;
   }
 
   .prompt-suggestions {

@@ -3,11 +3,13 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAdminAuth } from "@/context/AdminAuthContext";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAdminAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -28,8 +30,7 @@ export default function LoginPage() {
         return;
       }
       const data = await res.json();
-      // TODO: Replace localStorage with an httpOnly cookie-backed session before production use.
-      localStorage.setItem("admin_token", data.access_token);
+      login(data.access_token);
       router.push("/");
     } catch {
       setError("Could not connect to server");
