@@ -239,6 +239,34 @@ def test_rag_prompt_guides_customer_facing_company_responses(
     assert "explain how the company may help with their project" in prompt
     assert "stay within the retrieved context" in prompt
     assert "Do not invent services, experience, prices, timelines, guarantees, or contact details" in prompt
+    assert "Use the retrieved context as internal company knowledge" in prompt
+    assert "Do not mention sources, documents, chunks, retrieved context, or file names" in prompt
+    assert "Do not say the user provided the company knowledge" in prompt
+
+
+@pytest.mark.parametrize(
+    "customer_query",
+    [
+        "Can I hire you?",
+        "Are you available next month?",
+        "Can you integrate Stripe?",
+    ],
+)
+def test_customer_project_unknowns_reach_rag_contact_fallback_prompt(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, customer_query: str
+) -> None:
+    provider = RecordingChatProvider("Please contact the team to discuss the project.")
+    monkeypatch.setattr(query_service, "get_chat_provider", lambda _settings=None: provider)
+    _upload_company_document(client, b"Acme develops web apps, AI assistants, and workflow automation.")
+
+    response = client.post("/query", json={"query": customer_query, "top_k": 1})
+
+    assert response.status_code == 200
+    assert response.json()["answer"] == "Please contact the team to discuss the project."
+    assert len(provider.prompts) == 1
+    assert customer_query in provider.prompts[0]
+    assert "If the context does not contain the answer, say you do not know" in provider.prompts[0]
+    assert "contact the company through the available website channels" in provider.prompts[0]
 
 
 def test_off_topic_query_returns_customer_scope_refusal_without_calling_llm(

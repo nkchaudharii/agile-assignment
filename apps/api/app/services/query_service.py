@@ -26,6 +26,8 @@ _CUSTOMER_COMPANY_QUERY_TERMS = {
     "app",
     "application",
     "automation",
+    "available",
+    "availability",
     "booking",
     "build",
     "business",
@@ -38,6 +40,11 @@ _CUSTOMER_COMPANY_QUERY_TERMS = {
     "customer",
     "experience",
     "help",
+    "hire",
+    "integrate",
+    "integrates",
+    "integration",
+    "integrations",
     "offer",
     "offers",
     "platform",
@@ -204,7 +211,7 @@ def build_rag_prompt(
     history: Sequence[ChatTurn] = (),
 ) -> str:
     context = "\n\n".join(
-        f"Source {index + 1} ({_source(result)}):\n{result.text}"
+        f"Company knowledge {index + 1}:\n{result.text}"
         for index, result in enumerate(results)
     )
     if not context:
@@ -217,10 +224,14 @@ def build_rag_prompt(
         "technologies, or how the company may help with customer projects. "
         "If a question is unrelated to the company, politely say you can only answer "
         "questions about the company and its customer-facing work. "
+        "Use the retrieved context as internal company knowledge maintained by the company, "
+        "not as documents supplied by the website user. "
         "Answer questions about the company and, when a user asks about a project, "
         "explain how the company may help with their project based only on the retrieved context. "
         "Answer the question using only the retrieved context and stay within the retrieved context. "
         "Do not invent services, experience, prices, timelines, guarantees, or contact details. "
+        "Do not mention sources, documents, chunks, retrieved context, or file names in the answer. "
+        "Do not say the user provided the company knowledge. "
         "If the answer requires counting items explicitly listed in the context, count them. "
         "If the context does not contain the answer, say you do not know and invite the user "
         "to share more project details or contact the company through the available website channels. "
