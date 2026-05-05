@@ -1,7 +1,6 @@
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, WebSocket, status
 
 from app.core.responses import not_implemented_error
-from app.schemas.common import ApiError
 from app.schemas.voice import VoiceTranscriptionResponse
 from app.services.speech_to_text_service import transcribe_audio
 

@@ -84,6 +84,24 @@ def test_rag_prompt_includes_retrieved_chunks_and_user_query(
     assert "If the answer requires counting items explicitly listed in the context, count them." in provider.prompts[0]
 
 
+def test_rag_prompt_guides_customer_facing_company_responses(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    provider = RecordingChatProvider()
+    monkeypatch.setattr(query_service, "get_chat_provider", lambda _settings=None: provider)
+    _upload_company_document(client, b"Acme develops web apps, AI assistants, and workflow automation.")
+
+    response = client.post("/query", json={"query": "Can you help build my booking app?", "top_k": 1})
+
+    assert response.status_code == 200
+    prompt = provider.prompts[0]
+    assert "You are a customer-facing company assistant" in prompt
+    assert "helpful, cheerful, and professional" in prompt
+    assert "explain how the company may help with their project" in prompt
+    assert "stay within the retrieved context" in prompt
+    assert "Do not invent services, experience, prices, timelines, guarantees, or contact details" in prompt
+
+
 def test_llm_provider_failure_returns_controlled_error(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -116,13 +116,13 @@ export default function AdminHeader() {
 
   if (isAdmin) {
     return (
-      <div className="admin-header-controls">
-        <span className="admin-badge">Admin</span>
+      <div className="ml-auto flex items-center gap-3">
+        <span className="rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">Admin</span>
 
-        <div className="doc-replace-widget">
+        <div className="relative">
           <button
             type="button"
-            className="doc-replace-trigger-btn"
+            className="rounded-lg border-2 border-blue-600 bg-transparent px-3.5 py-2 text-sm text-blue-600 transition-colors hover:bg-blue-50"
             onClick={() => setShowUpload((v) => !v)}
             aria-expanded={showUpload}
           >
@@ -130,10 +130,10 @@ export default function AdminHeader() {
           </button>
 
           {showUpload && (
-            <div className="doc-replace-dropdown">
-              <p className="doc-replace-dropdown-title">Replace Company Document</p>
+            <div className="absolute right-0 top-[calc(100%+10px)] z-50 flex min-w-80 flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-xl">
+              <p className="text-sm font-bold text-slate-900">Replace Company Document</p>
 
-              <form onSubmit={handleReplaceSubmit} className="doc-replace-upload-form">
+              <form onSubmit={handleReplaceSubmit} className="flex flex-col gap-2.5">
                 {/* Hidden native input */}
                 <input
                   ref={fileInputRef}
@@ -184,7 +184,7 @@ export default function AdminHeader() {
 
                 <button
                   type="submit"
-                  className="doc-replace-btn"
+                  className="w-full rounded-lg border-0 bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                   disabled={!replaceFile || replaceStatus === "uploading"}
                 >
                   {replaceStatus === "uploading" ? "Uploading…" : "Upload Document"}
@@ -192,12 +192,12 @@ export default function AdminHeader() {
               </form>
 
               {replaceStatus === "success" && (
-                <p className="doc-replace-success" role="status">
+                <p className="text-sm text-green-700" role="status">
                   Document replaced successfully.
                 </p>
               )}
               {replaceStatus === "error" && (
-                <p className="doc-replace-error" role="alert">
+                <p className="text-sm text-red-700" role="alert">
                   {replaceError}
                 </p>
               )}
@@ -205,7 +205,7 @@ export default function AdminHeader() {
           )}
         </div>
 
-        <button type="button" className="admin-logout-btn" onClick={logout}>
+        <button type="button" className="rounded-lg border-2 border-slate-300 bg-transparent px-3.5 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900" onClick={logout}>
           Logout
         </button>
       </div>
@@ -213,8 +213,8 @@ export default function AdminHeader() {
   }
 
   return (
-    <div className="admin-header-controls">
-      <button type="button" className="admin-login-btn" onClick={() => router.push("/login")}>
+    <div className="ml-auto flex items-center gap-3">
+      <button type="button" className="rounded-lg border-2 border-blue-600 bg-transparent px-3.5 py-2 text-sm text-blue-600 transition-colors hover:bg-blue-50" onClick={() => router.push("/login")}>
         Admin Login
       </button>
     </div>
