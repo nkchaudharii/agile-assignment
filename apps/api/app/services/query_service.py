@@ -15,6 +15,67 @@ class LLMProviderError(RuntimeError):
     pass
 
 
+OFF_TOPIC_RESPONSE = (
+    "I can only answer questions about the company, its services, portfolio, "
+    "technologies, or how it may help with customer projects."
+)
+
+_CUSTOMER_COMPANY_QUERY_TERMS = {
+    "about",
+    "app",
+    "application",
+    "automation",
+    "booking",
+    "build",
+    "business",
+    "case",
+    "client",
+    "clients",
+    "company",
+    "contact",
+    "cost",
+    "customer",
+    "experience",
+    "help",
+    "offer",
+    "offers",
+    "platform",
+    "portfolio",
+    "price",
+    "pricing",
+    "product",
+    "products",
+    "project",
+    "projects",
+    "service",
+    "services",
+    "serve",
+    "serves",
+    "solution",
+    "solutions",
+    "specialise",
+    "specialize",
+    "team",
+    "technologies",
+    "technology",
+    "timeline",
+    "user",
+    "users",
+    "website",
+}
+
+_CUSTOMER_COMPANY_QUERY_PHRASES = (
+    "what do you do",
+    "who are you",
+    "get started",
+    "work with you",
+    "your company",
+    "your services",
+    "your portfolio",
+    "your team",
+)
+
+
 class OllamaGenerateProvider:
     def __init__(self, url: str, model: str, timeout_seconds: float = 30.0) -> None:
         self._url = url
@@ -87,6 +148,8 @@ def run_rag_query(query: str, top_k: int) -> tuple[str, list[str]]:
     normalized_query = query.strip()
     if not normalized_query:
         raise ValueError("Query cannot be empty")
+    if not is_customer_company_query(normalized_query):
+        return OFF_TOPIC_RESPONSE, []
     
     results = search_documents(normalized_query, top_k=top_k)
     prompt = build_rag_prompt(normalized_query, results)
@@ -105,6 +168,9 @@ async def run_rag_query_stream(query: str, top_k: int) -> AsyncGenerator[str, No
         normalized_query = query.strip()
         if not normalized_query:
             raise ValueError("Query cannot be empty")
+        if not is_customer_company_query(normalized_query):
+            yield OFF_TOPIC_RESPONSE
+            return
 
         
         results = search_documents(normalized_query, top_k=top_k)
@@ -132,6 +198,10 @@ def build_rag_prompt(query: str, results: Sequence[SearchResult]) -> str:
     return (
         "You are a customer-facing company assistant for the website frontend. "
         "Use a helpful, cheerful, and professional tone. "
+        "Only answer customer questions about the company, its services, portfolio, "
+        "technologies, or how the company may help with customer projects. "
+        "If a question is unrelated to the company, politely say you can only answer "
+        "questions about the company and its customer-facing work. "
         "Answer questions about the company and, when a user asks about a project, "
         "explain how the company may help with their project based only on the retrieved context. "
         "Answer the question using only the retrieved context and stay within the retrieved context. "
@@ -144,6 +214,18 @@ def build_rag_prompt(query: str, results: Sequence[SearchResult]) -> str:
         f"Question:\n{query}\n\n"
         "Answer:"
     )
+
+
+def is_customer_company_query(query: str) -> bool:
+    normalized = query.lower()
+    if any(phrase in normalized for phrase in _CUSTOMER_COMPANY_QUERY_PHRASES):
+        return True
+
+    words = {
+        word.strip(".,!?;:()[]{}\"'")
+        for word in normalized.replace("/", " ").replace("-", " ").split()
+    }
+    return bool(words & _CUSTOMER_COMPANY_QUERY_TERMS)
 
 
 def _extract_answer(payload: dict[str, Any]) -> str:

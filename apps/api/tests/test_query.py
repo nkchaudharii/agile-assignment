@@ -1,4 +1,5 @@
 import io
+import asyncio
 from pathlib import Path
 
 import pytest
@@ -100,6 +101,39 @@ def test_rag_prompt_guides_customer_facing_company_responses(
     assert "explain how the company may help with their project" in prompt
     assert "stay within the retrieved context" in prompt
     assert "Do not invent services, experience, prices, timelines, guarantees, or contact details" in prompt
+
+
+def test_off_topic_query_returns_customer_scope_refusal_without_calling_llm(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    provider = RecordingChatProvider("This should not be returned")
+    monkeypatch.setattr(query_service, "get_chat_provider", lambda _settings=None: provider)
+
+    response = client.post("/query", json={"query": "Explain Python classes", "top_k": 1})
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "answer": query_service.OFF_TOPIC_RESPONSE,
+        "sources": [],
+    }
+    assert provider.prompts == []
+
+
+def test_off_topic_stream_returns_customer_scope_refusal_without_calling_llm(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    provider = RecordingChatProvider("This should not be returned")
+    monkeypatch.setattr(query_service, "get_chat_provider", lambda _settings=None: provider)
+
+    async def collect_chunks() -> list[str]:
+        return [
+            chunk async for chunk in query_service.run_rag_query_stream("Explain Python classes", top_k=1)
+        ]
+
+    chunks = asyncio.run(collect_chunks())
+
+    assert "".join(chunks) == query_service.OFF_TOPIC_RESPONSE
+    assert provider.prompts == []
 
 
 def test_llm_provider_failure_returns_controlled_error(
